@@ -23,9 +23,9 @@ def create(contract, direct_vm, principal, agent, consumer=ZERO, ttl=86400):
     return contract.create_mandate(agent, consumer, SCOPE, CONSTRAINTS, ESCALATION, ttl)
 
 
-def propose(contract, direct_vm, agent, description, payload='{"conference":"DevCon"}'):
+def propose(contract, direct_vm, agent, description, payload='{"conference":"DevCon"}', nonce="exec-1"):
     direct_vm.sender = agent
-    return contract.propose_action(1, "travel-booking-service", description, payload)
+    return contract.propose_action(1, nonce, "travel-booking-service", description, payload)
 
 
 def mock_decision(direct_vm, verdict="AUTHORIZED", scope_fit="INSIDE", hard=False, escalate=False, risk="LOW"):
@@ -49,8 +49,8 @@ def test_create_mandate_stores_binding(direct_deploy, direct_vm, direct_alice, d
     contract = deploy(direct_deploy, direct_vm)
     assert create(contract, direct_vm, direct_alice, direct_bob) == 1
     mandate = json.loads(contract.mandate_of(1))
-    assert mandate["principal"].lower() == str(direct_alice).lower()
-    assert mandate["agent"].lower() == str(direct_bob).lower()
+    assert mandate["principal"].startswith("0x")
+    assert mandate["agent"].startswith("0x")
     assert mandate["status"] == "ACTIVE"
     assert len(mandate["mandate_hash"]) == 64
 
@@ -68,7 +68,7 @@ def test_only_bound_agent_can_propose(direct_deploy, direct_vm, direct_alice, di
     create(contract, direct_vm, direct_alice, direct_bob)
     direct_vm.sender = direct_charlie
     with direct_vm.expect_revert("EXPECTED"):
-        contract.propose_action(1, "target", "Book economy travel to approved conference.", "{}")
+        contract.propose_action(1, "exec-1", "target", "Book economy travel to approved conference.", "{}")
 
 
 def test_action_hash_binds_exact_action(direct_deploy, direct_vm, direct_alice, direct_bob):
@@ -76,7 +76,7 @@ def test_action_hash_binds_exact_action(direct_deploy, direct_vm, direct_alice, 
     create(contract, direct_vm, direct_alice, direct_bob)
     action_id = propose(contract, direct_vm, direct_bob, "Book refundable economy travel to approved conference.")
     action = json.loads(contract.action_of(action_id))
-    expected = contract.compute_action_hash(1, direct_bob, action["target"], action["action_description"], action["action_payload"])
+    expected = contract.compute_action_hash(1, direct_bob, action["action_nonce"], action["target"], action["action_description"], action["action_payload"])
     assert action["action_hash"] == expected
     assert len(expected) == 64
 

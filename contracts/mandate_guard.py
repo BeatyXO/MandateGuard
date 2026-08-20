@@ -127,6 +127,7 @@ class MandateGuard(gl.Contract):
     def propose_action(
         self,
         mandate_id: u256,
+        action_nonce: str,
         target: str,
         action_description: str,
         action_payload: str,
@@ -144,10 +145,13 @@ class MandateGuard(gl.Contract):
             raise gl.vm.UserError("EXPECTED: invalid action description")
         if len(action_payload) > MAX_PAYLOAD_LEN:
             raise gl.vm.UserError("EXPECTED: action payload too long")
+        if len(action_nonce.strip()) == 0 or len(action_nonce) > 200:
+            raise gl.vm.UserError("EXPECTED: invalid action nonce")
 
         action_hash = self._action_hash(
             mandate_id,
             str(sender),
+            action_nonce.strip(),
             target.strip(),
             action_description.strip(),
             action_payload.strip(),
@@ -163,6 +167,7 @@ class MandateGuard(gl.Contract):
             "mandate_id": str(mandate_id),
             "mandate_hash": str(mandate["mandate_hash"]),
             "agent": str(sender),
+            "action_nonce": self._compact(action_nonce.strip(), 200),
             "target": self._compact(target.strip(), 500),
             "action_description": self._compact(action_description.strip(), MAX_ACTION_LEN),
             "action_payload": self._compact(action_payload.strip(), MAX_PAYLOAD_LEN),
@@ -277,6 +282,15 @@ class MandateGuard(gl.Contract):
             return False
         return str(action["mandate_hash"]) == str(mandate["mandate_hash"])
 
+    @gl.public.view
+    def can_execute_for(self, mandate_id: u256, action_hash: str, expected_consumer: Address) -> bool:
+        if not self.can_execute(mandate_id, action_hash):
+            return False
+        mandate = self._mandate(mandate_id)
+        consumer = self._coerce_address(expected_consumer)
+        bound = Address(mandate["consumer"])
+        return (not self._is_zero(bound)) and consumer == bound
+
     @gl.public.write
     def consume_authorization(self, action_id: u256) -> None:
         action = self._action(action_id)
@@ -318,6 +332,7 @@ class MandateGuard(gl.Contract):
         self,
         mandate_id: u256,
         agent: Address,
+        action_nonce: str,
         target: str,
         action_description: str,
         action_payload: str,
@@ -325,6 +340,7 @@ class MandateGuard(gl.Contract):
         return self._action_hash(
             mandate_id,
             str(self._coerce_address(agent)),
+            action_nonce.strip(),
             target.strip(),
             action_description.strip(),
             action_payload.strip(),
@@ -429,19 +445,26 @@ class MandateGuard(gl.Contract):
 
     def _normalize_decision(self, raw) -> dict:
         data = self._as_dict(raw)
-        verdict = str(data.get("verdict", ACTION_REQUIRES_ESCALATION)).upper()
-        scope_fit = str(data.get("scope_fit", SCOPE_AMBIGUOUS)).upper()
-        risk = str(data.get("risk_class", RISK_HIGH)).upper()
+        if not isinstance(data, dict):
+            return self._safe_error()
+        verdict = data.get("verdict", None)
+        scope_fit = data.get("scope_fit", None)
+        risk = data.get("risk_class", None)
+        if type(verdict) is not str or type(scope_fit) is not str or type(risk) is not str:
+            return self._safe_error()
+        verdict = verdict.upper()
+        scope_fit = scope_fit.upper()
+        risk = risk.upper()
 
-        if verdict not in (ACTION_AUTHORIZED, ACTION_OUT_OF_SCOPE, ACTION_REQUIRES_ESCALATION):
-            verdict = ACTION_REQUIRES_ESCALATION
-        if scope_fit not in (SCOPE_INSIDE, SCOPE_OUTSIDE, SCOPE_AMBIGUOUS):
-            scope_fit = SCOPE_AMBIGUOUS
-        if risk not in (RISK_LOW, RISK_MEDIUM, RISK_HIGH, RISK_CRITICAL):
-            risk = RISK_HIGH
+        if verdict not in (ACTION_AUTHORIZED, ACTION_OUT_OF_SCOPE, ACTION_REQUIRES_ESCALATION) or scope_fit not in (SCOPE_INSIDE, SCOPE_OUTSIDE, SCOPE_AMBIGUOUS) or risk not in (RISK_LOW, RISK_MEDIUM, RISK_HIGH, RISK_CRITICAL):
+            return self._safe_error()
 
-        hard_violation = bool(data.get("hard_constraint_violation", False))
-        escalation_required = bool(data.get("escalation_required", False))
+        hard_value = data.get("hard_constraint_violation", None)
+        escalation_value = data.get("escalation_required", None)
+        if type(hard_value) is not bool or type(escalation_value) is not bool:
+            return self._safe_error()
+        hard_violation = hard_value
+        escalation_required = escalation_value
 
         if hard_violation or scope_fit == SCOPE_OUTSIDE:
             verdict = ACTION_OUT_OF_SCOPE
@@ -462,10 +485,26 @@ class MandateGuard(gl.Contract):
             "reason": self._compact(str(data.get("reason", "")), 900),
             "matched_rules": self._compact(str(data.get("matched_rules", "")), 900),
             "violated_rules": self._compact(str(data.get("violated_rules", "")), 900),
-            "principal_override": bool(data.get("principal_override", False)),
-            "principal_approved": bool(data.get("principal_approved", False)),
-            "principal_note": self._compact(str(data.get("principal_note", "")), MAX_NOTE_LEN),
-            "final_verdict": str(data.get("final_verdict", verdict)),
+            "principal_override": False,
+            "principal_approved": False,
+            "principal_note": "",
+            "final_verdict": verdict,
+        }
+
+    def _safe_error(self) -> dict:
+        return {
+            "verdict": ACTION_REQUIRES_ESCALATION,
+            "scope_fit": SCOPE_AMBIGUOUS,
+            "hard_constraint_violation": False,
+            "escalation_required": True,
+            "risk_class": RISK_HIGH,
+            "reason": "Malformed or unsafe validator output; fail closed.",
+            "matched_rules": "",
+            "violated_rules": "",
+            "principal_override": False,
+            "principal_approved": False,
+            "principal_note": "",
+            "final_verdict": ACTION_REQUIRES_ESCALATION,
         }
 
     def _as_dict(self, raw) -> dict:
@@ -524,7 +563,10 @@ class MandateGuard(gl.Contract):
                 "principal_note": "",
                 "final_verdict": ACTION_REQUIRES_ESCALATION,
             }
-        return self._normalize_decision(self.ledger[key])
+        stored = self._as_dict(self.ledger[key])
+        if not isinstance(stored, dict):
+            return self._safe_error()
+        return stored
 
     def _write_mandate(self, mandate_id: u256, value: dict) -> None:
         self.ledger[self._mandate_key(mandate_id)] = json.dumps(value, sort_keys=True)
@@ -533,26 +575,19 @@ class MandateGuard(gl.Contract):
         self.ledger[self._action_key(action_id)] = json.dumps(value, sort_keys=True)
 
     def _mandate_hash(self, mandate_id: u256, record: dict) -> str:
-        canonical = (
-            str(mandate_id) + "|" + str(record["principal"]).lower() + "|" + str(record["agent"]).lower()
-            + "|" + str(record["consumer"]).lower() + "|" + str(record["scope"]) + "|"
-            + str(record["hard_constraints"]) + "|" + str(record["escalation_policy"]) + "|"
-            + str(record["created_at"]) + "|" + str(record["expires_at"])
-        )
+        canonical = json.dumps(["MANDATEGUARD_MANDATE_V1", str(mandate_id), str(record["principal"]).lower(), str(record["agent"]).lower(), str(record["consumer"]).lower(), str(record["scope"]), str(record["hard_constraints"]), str(record["escalation_policy"]), str(record["created_at"]), str(record["expires_at"])], separators=(",", ":"), ensure_ascii=True)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def _action_hash(
         self,
         mandate_id: u256,
         agent: str,
+        action_nonce: str,
         target: str,
         action_description: str,
         action_payload: str,
     ) -> str:
-        canonical = (
-            str(mandate_id) + "|" + agent.lower() + "|" + target + "|"
-            + action_description + "|" + action_payload
-        )
+        canonical = json.dumps(["MANDATEGUARD_ACTION_V1", str(mandate_id), agent.lower(), target, action_description, action_payload, action_nonce], separators=(",", ":"), ensure_ascii=True)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def _mandate_key(self, mandate_id: u256) -> str:

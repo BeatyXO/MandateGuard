@@ -10,7 +10,13 @@ class IMandateGuard:
         pass
 
     class Write:
-        def is_authorized(self, action_id: u256) -> bool:
+        def can_execute_for(self, mandate_id: u256, action_hash: str, expected_consumer: Address) -> bool:
+            pass
+
+        def compute_action_hash(self, mandate_id: u256, agent: Address, action_nonce: str, target: str, action_description: str, action_payload: str) -> str:
+            pass
+
+        def consume_authorization(self, action_id: u256) -> None:
             pass
 
         def action_of(self, action_id: u256) -> str:
@@ -28,17 +34,18 @@ class TreasuryAgentConsumer(gl.Contract):
         self.execution_log = TreeMap[str, str]()
 
     @gl.public.write
-    def execute_authorized_action(self, action_id: u256, expected_action_hash: str) -> None:
+    def execute_authorized_action(self, action_id: u256, mandate_id: u256, agent: Address, action_nonce: str, target: str, action_description: str, action_payload: str) -> None:
         key = str(action_id)
         if key in self.executed and self.executed[key]:
             raise gl.vm.UserError("EXPECTED: action already executed")
 
         guard = gl.get_contract_at(self.guard, IMandateGuard)
-        if not guard.is_authorized(action_id):
+        expected_hash = guard.compute_action_hash(mandate_id, agent, action_nonce, target, action_description, action_payload)
+        if not guard.can_execute_for(mandate_id, expected_hash, self.address):
             raise gl.vm.UserError("EXPECTED: MandateGuard authorization required")
 
         action = json.loads(guard.action_of(action_id))
-        if str(action["action_hash"]).lower() != expected_action_hash.lower():
+        if str(action["action_hash"]).lower() != expected_hash.lower():
             raise gl.vm.UserError("EXPECTED: action hash mismatch")
 
         # Real consumers perform deterministic execution here: amount checks,
@@ -52,6 +59,7 @@ class TreasuryAgentConsumer(gl.Contract):
             },
             sort_keys=True,
         )
+        guard.consume_authorization(action_id)
 
     @gl.public.view
     def was_executed(self, action_id: u256) -> bool:

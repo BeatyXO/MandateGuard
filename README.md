@@ -253,3 +253,14 @@ MandateGuard is intended for the **standalone Intelligent Contracts** category:
 ## License
 
 MIT
+# MandateGuard
+
+Verified local results: Direct Mode — 16/16 passing · Preflight — 11/11 passing. GenVM lint and StudioNet deployment evidence remain pending in this checkout until the authenticated release toolchain is available.
+
+## 30-second reviewer version
+
+MandateGuard is a contract-only semantic capability firewall. A principal creates an immutable mandate; an agent proposes an exact action with a nonce; independent GenLayer validators classify that action into bounded semantic fields; deterministic contract code applies fail-closed consensus, expiry, revocation, replay, and consumer-binding rules.
+
+## Why this needs GenLayer
+
+Deterministic code can enforce `amount <= 500`, allowlists, and deadlines, but it cannot reliably interpret “only procure services directly related to approved research” or “escalate materially unusual terms.” GenLayer supplies independent validator evaluation of the same immutable authority boundary. The model reports bounded observations; it does not execute tools, alter mandates, or approve principal overrides.

@@ -33,6 +33,7 @@ def test_full_surface_on_studionet(default_account):
 
     opened = contract.propose_action(
         args=[
+            1,
             "authorized-1",
             "travel-booking-service",
             "Book a refundable economy ticket to an approved conference.",

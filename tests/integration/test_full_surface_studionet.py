@@ -22,7 +22,7 @@ def test_full_surface_on_studionet(default_account):
     created = contract.create_mandate(
         args=[
             agent,
-            ZERO,
+            str(default_account.address),
             "Arrange travel only for conferences explicitly approved by the DAO.",
             "Never buy first-class travel. Never send funds to a personal wallet.",
             "Escalate non-refundable bookings or unclear conference approval.",
@@ -33,7 +33,7 @@ def test_full_surface_on_studionet(default_account):
 
     opened = contract.propose_action(
         args=[
-            1,
+            "authorized-1",
             "travel-booking-service",
             "Book a refundable economy ticket to an approved conference.",
             '{"fare_class":"economy","refundability":"refundable"}',
@@ -46,8 +46,12 @@ def test_full_surface_on_studionet(default_account):
 
     action = json.loads(contract.action_of(args=[1]).call())
     decision = json.loads(contract.decision_of(args=[1]).call())
-    assert action["status"] in ("AUTHORIZED", "OUT_OF_SCOPE", "REQUIRES_ESCALATION")
-    assert decision["verdict"] in ("AUTHORIZED", "OUT_OF_SCOPE", "REQUIRES_ESCALATION")
+    assert action["status"] == "AUTHORIZED"
+    assert decision["verdict"] == "AUTHORIZED"
     assert decision["scope_fit"] in ("INSIDE", "OUTSIDE", "AMBIGUOUS")
     assert decision["risk_class"] in ("LOW", "MEDIUM", "HIGH", "CRITICAL")
     assert len(action["action_hash"]) == 64
+    assert contract.is_authorized(args=[1]).call() is True
+    assert contract.can_execute(args=[1, action["action_hash"]]).call() is True
+    assert contract.can_execute_for(args=[1, action["action_hash"], str(default_account.address)]).call() is True
+    assert contract.can_execute_for(args=[1, action["action_hash"], ZERO]).call() is False

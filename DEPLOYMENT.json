@@ -1,0 +1,18 @@
+{
+  "network": "Studionet",
+  "chain_id": 61999,
+  "contract_address": null,
+  "deployment_tx": null,
+  "source_commit": null,
+  "source_sha256": null,
+  "deployment_state": "NOT_DEPLOYED",
+  "live_proofs": {
+    "authorized": null,
+    "out_of_scope": null,
+    "requires_escalation": null,
+    "principal_resolution": null,
+    "consumption": null,
+    "cancellation": null,
+    "revocation": null
+  }
+}

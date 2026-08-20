@@ -8,4 +8,6 @@ The model cannot transfer funds, alter mandates, forge principal approval, selec
 
 Primary review order: `contracts/mandate_guard.py`, `tests/direct/`, `examples/treasury_agent_consumer.py`, `docs/CONSENSUS.md`, `docs/THREAT_MODEL.md`, `README.md`.
 
-Live deployment identifiers are intentionally recorded in `docs/DEPLOYMENT.md` only after an authenticated StudioNet deployment; no fabricated evidence is included.
+Deployment evidence is represented honestly in `DEPLOYMENT.json`; live identifiers remain null until an authenticated StudioNet deployment is completed.
+
+The model does not execute tools, transfer money, alter mandates, decide expiry or replay, choose consumers, or create principal overrides. Deterministic contract code owns those responsibilities. Validators independently answer only the bounded semantic question and must agree on verdict, scope, hard-constraint flag, escalation flag, and risk class.

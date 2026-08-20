@@ -2,6 +2,8 @@
 
 **Semantic capability firewall for autonomous agents on GenLayer.**
 
+Contract-only repository; no frontend or product application. Local verification: Direct Mode 19/19 passing, Preflight 12/12 passing, GenVM AST lint PASS. StudioNet deployment evidence is not claimed until authenticated live deployment is completed.
+
 MandateGuard is a standalone, reusable Intelligent Contract primitive. A principal creates an immutable natural-language mandate for an agent, the agent proposes an exact action, and GenLayer validators independently judge whether that action is inside the granted authority.
 
 There is **no frontend** in this repository. The intended integration surface is other contracts and agent infrastructure.
@@ -32,13 +34,13 @@ MandateGuard makes that boundary reusable on-chain.
    - escalation policy
    - expiry
 3. The agent calls `propose_action(...)`.
-4. MandateGuard computes an exact SHA-256 action fingerprint over the mandate ID, agent, target, description, and payload.
+4. MandateGuard computes an exact SHA-256 fingerprint from canonical JSON: `["MANDATEGUARD_ACTION_V1", mandate_id, agent, action_nonce, target, action_description, action_payload]`.
 5. `resolve_action(action_id)` runs GenLayer non-deterministic consensus.
 6. Validators independently classify the action as:
    - `AUTHORIZED`
    - `OUT_OF_SCOPE`
    - `REQUIRES_ESCALATION`
-7. Downstream contracts can query `is_authorized(action_id)` or `can_execute(mandate_id, action_hash)`.
+7. Downstream contracts can query `is_authorized(action_id)`, `can_execute(mandate_id, action_hash)`, or the consumer-bound `can_execute_for(mandate_id, action_hash, expected_consumer)`.
 8. An optional registered consumer can call `consume_authorization(action_id)` to make an approval one-shot.
 
 ## Consensus design
@@ -110,7 +112,7 @@ A decision stores the validator-agreed fields plus non-consensus audit prose and
 ```text
 create_mandate(agent, consumer, scope, hard_constraints, escalation_policy, ttl_seconds) -> mandate_id
 revoke_mandate(mandate_id, reason)
-propose_action(mandate_id, target, action_description, action_payload) -> action_id
+propose_action(mandate_id, action_nonce, target, action_description, action_payload) -> action_id
 resolve_action(action_id)
 resolve_escalation(action_id, approve, note)
 cancel_action(action_id, note)
@@ -121,8 +123,9 @@ consume_authorization(action_id)
 
 ```text
 can_execute(mandate_id, action_hash) -> bool
+can_execute_for(mandate_id, action_hash, expected_consumer) -> bool
 is_authorized(action_id) -> bool
-compute_action_hash(mandate_id, agent, target, action_description, action_payload) -> str
+compute_action_hash(mandate_id, agent, action_nonce, target, action_description, action_payload) -> str
 mandate_of(mandate_id) -> JSON
 action_of(action_id) -> JSON
 decision_of(action_id) -> JSON
@@ -253,14 +256,3 @@ MandateGuard is intended for the **standalone Intelligent Contracts** category:
 ## License
 
 MIT
-# MandateGuard
-
-Verified local results: Direct Mode — 16/16 passing · Preflight — 11/11 passing. GenVM lint and StudioNet deployment evidence remain pending in this checkout until the authenticated release toolchain is available.
-
-## 30-second reviewer version
-
-MandateGuard is a contract-only semantic capability firewall. A principal creates an immutable mandate; an agent proposes an exact action with a nonce; independent GenLayer validators classify that action into bounded semantic fields; deterministic contract code applies fail-closed consensus, expiry, revocation, replay, and consumer-binding rules.
-
-## Why this needs GenLayer
-
-Deterministic code can enforce `amount <= 500`, allowlists, and deadlines, but it cannot reliably interpret “only procure services directly related to approved research” or “escalate materially unusual terms.” GenLayer supplies independent validator evaluation of the same immutable authority boundary. The model reports bounded observations; it does not execute tools, alter mandates, or approve principal overrides.

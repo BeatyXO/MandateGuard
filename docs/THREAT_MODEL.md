@@ -16,15 +16,19 @@ Ambiguity fails closed to `REQUIRES_ESCALATION`. Missing permissions are not inf
 
 ## Action changed after authorization
 
-Every proposal receives a SHA-256 fingerprint over:
+Every proposal receives a SHA-256 fingerprint over a canonical JSON array:
 
 ```text
+MANDATEGUARD_ACTION_V1
 mandate_id
 agent
+action_nonce
 target
 action_description
 action_payload
 ```
+
+The domain separator prevents cross-type confusion, JSON encoding prevents delimiter ambiguity, and the nonce distinguishes repeated otherwise-identical executions.
 
 Consumers should bind execution to that exact action ID/hash.
 
@@ -47,6 +51,8 @@ Only the exact agent address named in the mandate can create proposals.
 ## Unauthorized escalation override
 
 Only the mandate principal can resolve `REQUIRES_ESCALATION`.
+
+Validator booleans must be actual JSON booleans and enums must be supported values. Wrong types, malformed JSON, and unsupported values fail closed to `REQUIRES_ESCALATION` / `AMBIGUOUS` / `HIGH`. Principal override fields are deterministic contract state: model-provided values are ignored and only `resolve_escalation` may set them.
 
 ## Well-formed but wrong leader output
 

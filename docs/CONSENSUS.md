@@ -4,6 +4,8 @@ MandateGuard keeps the consensus question intentionally narrow:
 
 > For one immutable mandate and one exact proposed action, is the action clearly authorized, clearly outside authority, or does it require principal escalation?
 
+Mandate identity is also domain-separated and collision-safe: the mandate hash is SHA-256 of canonical JSON beginning with `MANDATEGUARD_MANDATE_V1` and containing the mandate ID, principal, agent, consumer, scope, hard constraints, escalation policy, creation time, and expiry. Action identity uses `MANDATEGUARD_ACTION_V1` and canonical JSON containing mandate ID, lowercase agent, action nonce, target, description, and payload.
+
 ## Structured decision
 
 The leader returns:
@@ -37,6 +39,8 @@ risk_class
 
 `reason`, `matched_rules`, and `violated_rules` are excluded from equivalence because validators can explain the same judgment differently.
 
+Required booleans must be JSON booleans and enums must be supported strings. Malformed or incorrectly typed output fails closed to `REQUIRES_ESCALATION`, `AMBIGUOUS`, `HIGH`. Principal override metadata is deterministic contract state; LLM values are ignored and only `resolve_escalation` can set it.
+
 ## Deterministic fail-closed normalization
 
 Before comparison and storage:
@@ -59,3 +63,7 @@ Risk does not itself grant permission, but it is part of the stored authorizatio
 ## Escalation
 
 Consensus can return `REQUIRES_ESCALATION`. The principal may then approve or deny that exact action. The override cannot rewrite the mandate, is recorded in the decision dossier, and is unavailable after revocation or expiry.
+
+## Counter semantics
+
+`authorized_count`, `denied_count`, and `escalation_count` are transition/event counters, not mutually exclusive current action totals. Opening an escalation increments `escalation_count`; principal approval or denial later increments the corresponding authorized or denied counter. `consumed_count` counts irreversible consumption events.

@@ -13,6 +13,7 @@ checks = {
     "no frontend artifacts": not any((ROOT / n).exists() for n in ("package.json", "next.config.js", "src/app")),
     "source compiles": True,
     "direct tests exist": any((ROOT / "tests/direct").glob("test_*.py")),
+    "integration tests exist": any((ROOT / "tests/integration").glob("test_*.py")),
     "docs exist": all((ROOT / n).is_file() for n in ("README.md", "docs/CONSENSUS.md", "docs/THREAT_MODEL.md")),
     "consumer example exists": (ROOT / "examples/treasury_agent_consumer.py").is_file(),
 }

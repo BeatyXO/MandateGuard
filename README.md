@@ -2,7 +2,11 @@
 
 **Semantic capability firewall for autonomous agents on GenLayer.**
 
-Contract-only repository; no frontend or product application. Local verification: Direct Mode 19/19 passing, Preflight 12/12 passing, GenVM AST lint PASS. StudioNet deployment evidence is not claimed until authenticated live deployment is completed.
+Contract-only repository; no frontend or product application. Verified: Direct Mode 19/19 passing, Preflight 12/12 passing, GenVM AST lint PASS, and a live StudioNet full-cycle proof.
+
+## Live deployment
+
+StudioNet contract: [`0x7036E2B16d0CA5ae68B154752f628d9bf804fC31`](https://explorer-studio.genlayer.com/address/0x7036E2B16d0CA5ae68B154752f628d9bf804fC31). The deployed source SHA-256 is `9a462af50d52883634fd71479d11130d262491aca948c7bb5b8d61ae1ac0a76e`; source parity passes. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for transaction evidence.
 
 MandateGuard is a standalone, reusable Intelligent Contract primitive. A principal creates an immutable natural-language mandate for an agent, the agent proposes an exact action, and GenLayer validators independently judge whether that action is inside the granted authority.
 

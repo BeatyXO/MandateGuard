@@ -1,18 +1,18 @@
 {
   "network": "Studionet",
   "chain_id": 61999,
-  "contract_address": null,
+  "contract_address": "0x7036E2B16d0CA5ae68B154752f628d9bf804fC31",
   "deployment_tx": null,
-  "source_commit": null,
-  "source_sha256": null,
-  "deployment_state": "NOT_DEPLOYED",
+  "source_commit": "f7a6c2589e8ac087c7e4f337ddc5c147a65f2114",
+  "source_sha256": "9a462af50d52883634fd71479d11130d262491aca948c7bb5b8d61ae1ac0a76e",
+  "deployment_state": "ACCEPTED / MAJORITY_AGREE",
   "live_proofs": {
-    "authorized": null,
-    "out_of_scope": null,
-    "requires_escalation": null,
-    "principal_resolution": null,
-    "consumption": null,
-    "cancellation": null,
-    "revocation": null
+    "authorized": "0xb09dab5ca89ee62d40957b8206afacf78620d4f5e4ae3517c78956b34595ae39",
+    "out_of_scope": "0xa4db30c6e4aa6702471d03d6d841ed3e000d9cda2e3a465d64eb02e39e9fa318",
+    "requires_escalation": "0xbfb1e7512ee33a6d48289d8e0fc3d7348785ef2e0b2e4d58415237441b29a51e",
+    "principal_resolution": "0xf85e45e695ecc347abd0c68b450169b9791529add772ddb2de38e4c907c39ef6",
+    "consumption": "0x1c1256804aec5c7d80444e4afb21f72af9017546c51fed1928f2e3e918f6634e",
+    "cancellation": "0x0f33dfc72f5c08d2559c5cae2f82b90612ea1bfb06a21699242f75e35fb0df99",
+    "revocation": "0x50d02c4d96bef54337a725c59e4f352cd8707c4c7787a16fcf24e54a19f4c7d5"
   }
 }
